@@ -1,11 +1,12 @@
-import express, { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
-import cors from 'cors';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv-safe';
-import 'dotenv/config'; 
-
+import express, { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
+import cors from "cors";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv-safe";
+import "dotenv/config";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 dotenv.config();
 
 if (!process.env.JWT_SECRET) {
@@ -15,13 +16,15 @@ if (!process.env.JWT_SECRET) {
 const app = express();
 const prisma = new PrismaClient();
 
-app.use(cors({
-  origin: ['http://localhost:3000'], 
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:3000"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
-app.post('/create-user', async (req: Request, res: Response) => {
+app.post("/create-user", async (req: Request, res: Response) => {
   const { name, last_name, email, password } = req.body;
 
   try {
@@ -54,7 +57,7 @@ app.post('/create-user', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/login', async (req: Request, res: Response) => {
+app.post("/login", async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   try {
@@ -66,23 +69,80 @@ app.post('/login', async (req: Request, res: Response) => {
     const token = jwt.sign(
       { userId: user.id_user },
       process.env.JWT_SECRET as string,
-      { expiresIn: '1d' }
+      { expiresIn: "1d" }
     );
 
     // Envoyer le token dans un cookie HttpOnly
-    res.cookie('authToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000,
-    }).send('Connexion réussie');
-
+    res
+      .cookie("authToken", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 24 * 60 * 60 * 1000,
+      })
+      .send("Connexion réussie");
   } catch (error) {
     console.error("Erreur lors de la tentative de connexion:", error);
     res.status(500).send("Erreur interne du serveur");
   }
 });
 
+// Configuration de Nodemailer
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // true pour 465, false pour d'autres ports
+  auth: {
+    user: "les4parfaits@gmail.com",
+    pass: "madalyva2024",
+  },
+});
+
+app.post("/request-reset-password", async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  try {
+    const user = await prisma.user_Customer.findFirst({ where: { email } });
+
+    if (user) {
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const resetTokenExpires = new Date(Date.now() + 3600000); // 1 heure
+
+      // Sauvegarder le token et sa date d'expiration dans la base de données
+      await prisma.passwordResetRequest.create({
+        data: {
+          userId: user.id_user,
+          token: resetToken,
+          expires: resetTokenExpires,
+        },
+      });
+
+      const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
+
+      // Envoyer l'e-mail
+      await transporter.sendMail({
+        to: email,
+        subject: "Réinitialisation de votre mot de passe",
+        html: `Cliquez sur ce lien pour réinitialiser votre mot de passe : <a href="${resetLink}">${resetLink}</a>`,
+      });
+    }
+
+    // Toujours renvoyer la même réponse pour éviter l'enumeration d'e-mails
+    res.send(
+      "Si un compte correspondant à cet email est trouvé, un email de réinitialisation a été envoyé."
+    );
+  } catch (error) {
+    console.error(
+      "Mailer : Une erreur est survenue lors de la demande de réinitialisation de mot de passe : ok",
+      error
+    );
+    res
+      .status(500)
+      .send(
+        "Une erreur est survenue lors de la demande de réinitialisation de mot de passe."
+      );
+  }
+});
 
 const PORT = 3001;
 app.listen(PORT, () => {
