@@ -3,10 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -22,7 +20,6 @@ model Categorie {
 model Favori {
   id_user       Int
   id_produit    Int
-  id_favoris    Int           @unique(map: "favori_id_favoris_key")
   Produit       Produit       @relation(fields: [id_produit], references: [id_produit], onDelete: NoAction, onUpdate: NoAction, map: "favori_id_produit_fkey")
   User_Customer User_Customer @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction, map: "favori_id_user_fkey")
 

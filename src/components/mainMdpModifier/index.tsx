@@ -23,6 +23,7 @@ const MainMdpModifier: React.FC = () => {
         const { name, value } = event.target;
         setUserDataPassword({ ...userDataPassword, [name]: value });
     };
+    
     const validatePassword = (confirmPassword: string) => {
         const regex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/;
         return regex.test(confirmPassword);
@@ -60,7 +61,6 @@ const MainMdpModifier: React.FC = () => {
                     " Quelque chose s'est mal passé lors de l'envoi de la demande."
                 );
 
-            // Message de succès ou de traitement
             setMessage("Votre mot de passe a bien été modifié.");
         } catch (error) {
             console.error(

@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv-safe';
-import 'dotenv/config'; 
+import 'dotenv/config';
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 
@@ -18,7 +18,7 @@ const app = express();
 const prisma = new PrismaClient();
 
 app.use(cors({
-  origin: ['http://localhost:3000'], 
+  origin: ['http://localhost:3000'],
   credentials: true,
 }));
 app.use(express.json());
